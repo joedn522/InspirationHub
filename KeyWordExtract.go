@@ -11,18 +11,18 @@ import (
 	"strings"
 )
 
-const openaiAPIKey = "sk-WNsjjCTIQPGo-qTbVDp1-vEJdor81fWjlutf6LoUvWT3BlbkFJFXyc0N3aTSLXrCybbPIz447IOE9byIQKeku_t_QBcA" // 在此處填入你的 API Key
-const outputDir = "textDir"               // 輸出 metadata 的資料夾
+const openaiAPIKey = "" // 在此處填入你的 API Key
+const outputDir = "metaDir"               // 輸出 metadata 的資料夾
 
 // Function to call OpenAI API to get keywords from text
 func getKeywordsFromLLM(text string) ([]string, error) {
-	url := "https://api.openai.com/v1/completions"
+	url := "https://api.openai.com/v1/chat/completions"
 	reqBody := map[string]interface{}{
-		"model": "text-davinci-003",
-		"prompt": fmt.Sprintf(
-			"Extract keywords from the following text:\n%s",
-			text,
-		),
+		"model": "gpt-3.5-turbo",
+		"messages": []map[string]string{
+			{"role": "system", "content": "You are a helpful assistant."},
+			{"role": "user", "content": fmt.Sprintf("Extract keywords from the following text:\n%s", text)},
+		},
 		"max_tokens": 50,
 	}
 
@@ -51,14 +51,25 @@ func getKeywordsFromLLM(text string) ([]string, error) {
 		return nil, err
 	}
 
+	fmt.Println("API Response:", string(body)) // 添加这一行来打印响应
+
 	var result map[string]interface{}
 	err = json.Unmarshal(body, &result)
 	if err != nil {
 		return nil, err
 	}
 
-	keywordsRaw := result["choices"].([]interface{})[0].(map[string]interface{})["text"].(string)
-	keywords := strings.Split(strings.TrimSpace(keywordsRaw), ",")
+	choices, ok := result["choices"].([]interface{})
+	if !ok || len(choices) == 0 {
+		return nil, fmt.Errorf("unexpected API response format")
+	}
+
+	textResponse, ok := choices[0].(map[string]interface{})["message"].(map[string]interface{})["content"].(string)
+	if !ok {
+		return nil, fmt.Errorf("unexpected text format in API response")
+	}
+
+	keywords := strings.Split(strings.TrimSpace(textResponse), ",")
 	for i := range keywords {
 		keywords[i] = strings.TrimSpace(keywords[i])
 	}
