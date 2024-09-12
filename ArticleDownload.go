@@ -18,6 +18,26 @@ const openaiAPIKey = "" // 替换为你的 OpenAI API Key
 const searchResultDir = "ArticleFetching"  // BingSearch 生成的链接文件的目录
 const outputDir = "ArticleDownload"        // 摘要文件的保存目录
 
+// Function to read the API key from a file
+func readAPIKeyFromFile(filename string) (string, error) {
+    file, err := os.Open(filename)
+    if err != nil {
+        return "", err
+    }
+    defer file.Close()
+
+    scanner := bufio.NewScanner(file)
+    if scanner.Scan() {
+        return scanner.Text(), nil
+    }
+
+    if err := scanner.Err(); err != nil {
+        return "", err
+    }
+
+    return "", fmt.Errorf("file is empty")
+}
+
 // Function to call OpenAI API to summarize text in Chinese
 func summarizeText(text string) (string, error) {
 	url := "https://api.openai.com/v1/chat/completions"
@@ -188,6 +208,16 @@ func processSearchResults() error {
 }
 
 func main() {
+	// Read the API key from the file
+	openaiAPIKey, err := readAPIKeyFromFile("key")
+	if err != nil {
+		fmt.Println("Error reading API key:", err)
+		return
+	}
+
+	// Use the openaiAPIKey variable as needed
+	fmt.Println("OpenAI API Key:", openaiAPIKey)
+
 	err := processSearchResults()
 	if err != nil {
 		fmt.Printf("Error: %v\n", err)
