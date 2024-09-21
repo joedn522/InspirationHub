@@ -1,6 +1,7 @@
 package main
 
 import (
+	"bufio"
 	"bytes"
 	"encoding/json"
 	"fmt"
@@ -14,7 +15,6 @@ import (
 	"github.com/PuerkitoBio/goquery"
 )
 
-const openaiAPIKey = "" // 替换为你的 OpenAI API Key
 const searchResultDir = "ArticleFetching"  // BingSearch 生成的链接文件的目录
 const outputDir = "ArticleDownload"        // 摘要文件的保存目录
 
@@ -39,7 +39,7 @@ func readAPIKeyFromFile(filename string) (string, error) {
 }
 
 // Function to call OpenAI API to summarize text in Chinese
-func summarizeText(text string) (string, error) {
+func summarizeText(text, openaiAPIKey string) (string, error) {
 	url := "https://api.openai.com/v1/chat/completions"
 	reqBody := map[string]interface{}{
 		"model": "gpt-3.5-turbo",
@@ -59,6 +59,9 @@ func summarizeText(text string) (string, error) {
 	if err != nil {
 		return "", err
 	}
+
+	// help to print the key
+	fmt.Println("openaiAPIKey:", openaiAPIKey)
 
 	req.Header.Set("Content-Type", "application/json")
 	req.Header.Set("Authorization", "Bearer "+openaiAPIKey)
@@ -147,7 +150,7 @@ func downloadArticle(url string) (string, error) {
 }
 
 // Function to process each search result file and summarize articles
-func processSearchResults() error {
+func processSearchResults(openaiAPIKey string) error {
 	fmt.Println("Starting to process search result files...")
 	err := os.MkdirAll(outputDir, os.ModePerm)
 	if err != nil {
@@ -184,7 +187,7 @@ func processSearchResults() error {
 					}
 
 					fmt.Println("Summarizing article...")
-					summary, err := summarizeText(articleText)
+					summary, err := summarizeText(articleText, openaiAPIKey)
 					if err != nil {
 						fmt.Printf("Failed to summarize article from: %s, error: %v\n", link, err)
 						continue
@@ -209,7 +212,7 @@ func processSearchResults() error {
 
 func main() {
 	// Read the API key from the file
-	openaiAPIKey, err := readAPIKeyFromFile("key")
+	openaiAPIKey, err := readAPIKeyFromFile("openaikey")
 	if err != nil {
 		fmt.Println("Error reading API key:", err)
 		return
@@ -218,7 +221,7 @@ func main() {
 	// Use the openaiAPIKey variable as needed
 	fmt.Println("OpenAI API Key:", openaiAPIKey)
 
-	err := processSearchResults()
+	err = processSearchResults(openaiAPIKey)
 	if err != nil {
 		fmt.Printf("Error: %v\n", err)
 	}

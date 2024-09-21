@@ -1,6 +1,7 @@
 package main
 
 import (
+	"bufio"
 	"bytes"
 	"encoding/json"
 	"fmt"
@@ -11,12 +12,31 @@ import (
 	"strings"
 )
 
-const openaiAPIKey = "" // 替换为你的 OpenAI API Key
 const inputDir = "ArticleMerge"            // 存放要合并的文本文件的目录
 const outputDir = "ArticleComplete"        // 保存完整文章的目录
 
+
+func readAPIKeyFromFile(filename string) (string, error) {
+    file, err := os.Open(filename)
+    if err != nil {
+        return "", err
+    }
+    defer file.Close()
+
+    scanner := bufio.NewScanner(file)
+    if scanner.Scan() {
+        return scanner.Text(), nil
+    }
+
+    if err := scanner.Err(); err != nil {
+        return "", err
+    }
+
+    return "", fmt.Errorf("file is empty")
+}
+
 // Function to call OpenAI API to merge and refine the content into a complete article
-func mergeAndRefineContent(contents string) (string, error) {
+func mergeAndRefineContent(contents string, openaiAPIKey string) (string, error) {
 	url := "https://api.openai.com/v1/chat/completions"
 	reqBody := map[string]interface{}{
 		"model": "gpt-3.5-turbo",
@@ -110,7 +130,7 @@ func readAndMergeFiles(inputDir string) (string, error) {
 }
 
 // Function to process files, merge their content, and save the completed article
-func processAndSaveArticle() error {
+func processAndSaveArticle(openaiAPIKey string) error {
 	fmt.Println("Starting to process and merge files...")
 
 	// Read and merge all .txt files from the input directory
@@ -122,7 +142,7 @@ func processAndSaveArticle() error {
 	fmt.Println("Merged content:", mergedContent)
 
 	// Send the merged content to OpenAI API for refinement
-	completeArticle, err := mergeAndRefineContent(mergedContent)
+	completeArticle, err := mergeAndRefineContent(mergedContent, openaiAPIKey)
 	if err != nil {
 		return err
 	}
@@ -144,7 +164,17 @@ func processAndSaveArticle() error {
 }
 
 func main() {
-	err := processAndSaveArticle()
+	// Read the API key from the file
+	openaiAPIKey, err := readAPIKeyFromFile("openaikey")
+	if err != nil {
+		fmt.Println("Error reading API key:", err)
+		return
+	}
+
+	// Use the openaiAPIKey variable as needed
+	fmt.Println("OpenAI API Key:", openaiAPIKey)
+
+	err = processAndSaveArticle(openaiAPIKey)
 	if err != nil {
 		fmt.Printf("Error: %v\n", err)
 	}

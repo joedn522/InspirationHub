@@ -1,6 +1,7 @@
 package main
 
 import (
+	"bufio"
 	"bytes"
 	"encoding/json"
 	"fmt"
@@ -11,11 +12,30 @@ import (
 	"strings"
 )
 
-const openaiAPIKey = "" // 在此處填入你的 API Key
-const outputDir = "metaDir"               // 輸出 metadata 的資料夾
+const outputDir = "KeyWordExtract"               // 輸出 metadata 的資料夾
+
+// Function to read the API key from a file
+func readAPIKeyFromFile(filename string) (string, error) {
+    file, err := os.Open(filename)
+    if err != nil {
+        return "", err
+    }
+    defer file.Close()
+
+    scanner := bufio.NewScanner(file)
+    if scanner.Scan() {
+        return scanner.Text(), nil
+    }
+
+    if err := scanner.Err(); err != nil {
+        return "", err
+    }
+
+    return "", fmt.Errorf("file is empty")
+}
 
 // Function to call OpenAI API to get keywords from text
-func getKeywordsFromLLM(text string) ([]string, error) {
+func getKeywordsFromLLM(text string, openaiAPIKey string) ([]string, error) {
 	url := "https://api.openai.com/v1/chat/completions"
 	reqBody := map[string]interface{}{
 		"model": "gpt-3.5-turbo",
@@ -78,7 +98,7 @@ func getKeywordsFromLLM(text string) ([]string, error) {
 }
 
 // Function to process all txt files in a directory
-func processFiles(inputDir string) error {
+func processFiles(inputDir string, openaiAPIKey string) error {
 	err := os.MkdirAll(outputDir, os.ModePerm)
 	if err != nil {
 		return err
@@ -95,7 +115,7 @@ func processFiles(inputDir string) error {
 				return err
 			}
 
-			keywords, err := getKeywordsFromLLM(string(content))
+			keywords, err := getKeywordsFromLLM(string(content), openaiAPIKey)
 			if err != nil {
 				return err
 			}
@@ -118,8 +138,15 @@ func processFiles(inputDir string) error {
 }
 
 func main() {
+	// Read the API key from the file
+	openaiAPIKey, err := readAPIKeyFromFile("openaikey")
+	if err != nil {
+		fmt.Println("Error reading API key:", err)
+		return
+	}
+
 	inputDir := "textDir" // 替換為你的資料夾路徑
-	err := processFiles(inputDir)
+	err = processFiles(inputDir, openaiAPIKey)
 	if err != nil {
 		fmt.Printf("Error: %v\n", err)
 	}

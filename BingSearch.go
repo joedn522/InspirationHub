@@ -1,6 +1,7 @@
 package main
 
 import (
+	"bufio"
 	"encoding/json"
 	"fmt"
 	"io/ioutil"
@@ -10,12 +11,32 @@ import (
 	"strings"
 )
 
-const bingAPIKey = "" // 替换为你的 Bing API Key
-const metaDir = "metaDir"            // 替换为你生成的 metadata 目录
-const searchResultDir = "ArticleFetching" // 保存搜索结果的目录
+const keywordDir = "KeyWordExtract"           
+const searchResultDir = "ArticleFetching" 
+
+
+// Function to read the API key from a file
+func readAPIKeyFromFile(filename string) (string, error) {
+    file, err := os.Open(filename)
+    if err != nil {
+        return "", err
+    }
+    defer file.Close()
+
+    scanner := bufio.NewScanner(file)
+    if scanner.Scan() {
+        return scanner.Text(), nil
+    }
+
+    if err := scanner.Err(); err != nil {
+        return "", err
+    }
+
+    return "", fmt.Errorf("file is empty")
+}
 
 // Function to perform Bing search and return top 3 URLs
-func searchBing(query string) ([]string, error) {
+func searchBing(query string, bingAPIKey string) ([]string, error) {
 	searchURL := "https://api.bing.microsoft.com/v7.0/search"
 	client := &http.Client{}
 
@@ -70,14 +91,14 @@ func searchBing(query string) ([]string, error) {
 }
 
 // Function to process each metadata file and perform Bing search
-func processMetadataFiles() error {
+func processMetadataFiles(bingAPIKey string) error {
 	fmt.Println("Starting to process metadata files...")
 	err := os.MkdirAll(searchResultDir, os.ModePerm)
 	if err != nil {
 		return err
 	}
 
-	err = filepath.Walk(metaDir, func(path string, info os.FileInfo, err error) error {
+	err = filepath.Walk(keywordDir, func(path string, info os.FileInfo, err error) error {
 		if err != nil {
 			return err
 		}
@@ -104,7 +125,7 @@ func processMetadataFiles() error {
 				fmt.Printf("Searching Bing for: %s\n", query)
 
 				if query != "" {
-					results, err := searchBing(query)
+					results, err := searchBing(query, bingAPIKey)
 					if err != nil {
 						return err
 					}
@@ -127,7 +148,16 @@ func processMetadataFiles() error {
 }
 
 func main() {
-	err := processMetadataFiles()
+	bingAPIKey, err := readAPIKeyFromFile("bingkey")
+	if err != nil {
+		fmt.Printf("Error reading Bing API key: %v\n", err)
+		return
+	}
+
+	// Use the openaiAPIKey variable as needed
+	fmt.Println("Bing API Key:", bingAPIKey)
+
+	err = processMetadataFiles(bingAPIKey)
 	if err != nil {
 		fmt.Printf("Error: %v\n", err)
 	}
